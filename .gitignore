@@ -1,0 +1,11 @@
+*.*~
+sound1
+sound2
+sound3
+Release
+*.sdf
+*.suo
+Release
+Debug
+ipch
+*.opensdf
