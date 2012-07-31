@@ -4,11 +4,29 @@
 #include <Windows.h>
 #include <MMSystem.h>
 
+int notes[16] = { 122, 115, 109, 103, 97, 92, 86, 82, 77, 73, 69, 65, 61, 58, 54, 51 };
+int arpeggio[][4] = {
+	{ 0, 3, 7, 12 },
+	{ 2, 5, 7, 10 },
+	{ 1, 5, 7, 10 },
+	{ 1, 3, 5, 8 },
+	{ 1, 3, 5, 10 },
+};
+int arpseq[8] = { 0, 0, 1, 1, 2, 2, 4, 3 };
+
+static inline unsigned char voice_arp(unsigned long i)
+{
+	return (((i << 1) / (notes[arpeggio[arpseq[(i >> 13) & 7]][(i >> 8) & 3]] >> 2)) & 1) << 7;
+}
+
 void fill(char *data)
 {
-	for (int i = 0; i < 4096; i++)
+	static unsigned long i = 0;
+
+	for (int j = 0; j < 4096; j++)
 	{
-		data[i] = (i & (i & 512 ? 7 : 3)) << 3;
+		data[j] = voice_arp(i);
+		i++;
 	}
 }
 
