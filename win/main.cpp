@@ -4,6 +4,7 @@
 #include <malloc.h>
 #include <Windows.h>
 #include <MMSystem.h>
+#include "binary.h"
 
 int notes[25] = { 134, 142, 150, 159, 169, 179, 189, 201, 213, 225, 239, 253, 268, 284, 301, 319, 338, 358, 379, 401, 425, 451, 477, 506, 536 };
 
@@ -15,6 +16,8 @@ int arpeggio[][4] = {
 	{ 1, 3, 5, 10 },
 };
 int arpseq[16] = { 0, 0, 1, 1, 2, 2, 4, 3, 0, 0, 1, 1, 2, 3, 4, 4 };
+//int arptiming[32] = { 4, 2, 4, 2, 4, 2, 4, 5, 1, 2, 2 }
+const uint32_t arptiming = B32(00001100,00110000,11000011,11101100);
 
 int bassbeat[8] = { 0, 0, 1, 0, 0, 1, 0, 1 };
 int bassline[16] = { 12, 12, 15, 10, 12, 12, 17, 10, 12, 12, 15, 7, 8, 8, 3, 7 };
@@ -43,8 +46,8 @@ static inline unsigned char voice_lead(unsigned long i)
 	uint8_t melody = leadmelody[leadptr];
 	int note = notes[melody == 1 ? 0 : melody]; // TODO remove this hack by using note table
 	lead_osc += note;
-	lead_flange += note + 1;//(i & 1);
-	return (!melody) ? 0 : (((lead_osc >> 6) & 0x7F) + ((lead_flange >> 6) & 0x3F));  // xor also sounds cool
+	lead_flange += note + (i & 1);
+	return (!melody) ? 0 : (((lead_osc >> 6) & 0x7F) + ((lead_osc >> 6) & 0x3F) + ((lead_flange >> 6) & 0x3F));  // xor also sounds cool
 }
                      
 static inline unsigned char voice_arp(unsigned long i)
@@ -52,7 +55,8 @@ static inline unsigned char voice_arp(unsigned long i)
 	static uint16_t arp_osc = 0;
 	int note = notes[12 + arpeggio[arpseq[(i >> 13) & 15]][(i >> 7) & 3]];
 	arp_osc += note;
-	return ((arp_osc >> 5) & 128) - 1;
+	return ((arptiming & (1 << (31 - (i >> 9)))) && (arp_osc & (1 << 12))) ? 0 : 140;
+	//return ((arp_osc >> 5) & 128) - 1;
 }
 
 static inline unsigned char voice_bass(unsigned long i)
@@ -73,7 +77,7 @@ void fill(char *data)
 
 	for (int j = 0; j < 4096; j++)
 	{
-		unsigned char sample = (voice_lead(i) >> 1) + (voice_bass(i) >> 1);// + (voice_arp(i) >> 1);
+		unsigned char sample = /*(voice_lead(i) >> 1) + */(voice_bass(i) >> 2) + (voice_arp(i) >> 2);
 		data[j] = sample;
 		i++;
 	}
