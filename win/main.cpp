@@ -5,7 +5,8 @@
 #include <Windows.h>
 #include <MMSystem.h>
 
-int notes[16] = { 122, 115, 109, 103, 97, 92, 86, 82, 77, 73, 69, 65, 61, 58, 54, 51 };
+int notes[25] = { 134, 142, 150, 159, 169, 179, 189, 201, 213, 225, 239, 253, 268, 284, 301, 319, 338, 358, 379, 401, 425, 451, 477, 506, 536 };
+
 int arpeggio[][4] = {
 	{ 0, 3, 7, 12 },
 	{ 2, 5, 7, 10 },
@@ -15,14 +16,39 @@ int arpeggio[][4] = {
 };
 int arpseq[16] = { 0, 0, 1, 1, 2, 2, 4, 3, 0, 0, 1, 1, 2, 3, 4, 4 };
 
-int notes2[25] = { 134, 142, 150, 159, 169, 179, 189, 201, 213, 225, 239, 253, 268, 284, 301, 319, 338, 358, 379, 401, 425, 451, 477, 506, 536 };
 int bassbeat[8] = { 0, 0, 1, 0, 0, 1, 0, 1 };
 int bassline[16] = { 12, 12, 15, 10, 12, 12, 17, 10, 12, 12, 15, 7, 8, 8, 3, 7 };
+
+#define LEADSIZE 28
+int leadmelody[LEADSIZE] = { 12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 5, 7, 3, 1, 0 };
+int leadtiming[LEADSIZE] = {  2, 1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1, 2, 2, 1, 2, 3, 27};
+
+static inline unsigned char voice_lead(unsigned long i)
+{
+	static uint8_t leadptr = 0xFF;
+	static uint16_t lead_osc = 0;
+	static uint8_t leadtimer = 0;
+
+	if (0 == leadtimer)
+	{
+		leadptr++;
+		if (leadptr == LEADSIZE)
+			leadptr = 0;
+		leadtimer = leadtiming[leadptr];
+	}
+
+	uint8_t melody = leadmelody[leadptr];
+	int note = notes[melody == 1 ? 0 : melody];
+	lead_osc += note;
+	if (0 == (i & 0x3FF))
+		leadtimer--;
+	return (!melody) ? 0 : ((lead_osc >> 6) & 0x7F);
+}
                      
 static inline unsigned char voice_arp(unsigned long i)
 {
 	static uint16_t arp_osc = 0;
-	int note = notes2[12 + arpeggio[arpseq[(i >> 13) & 15]][(i >> 7) & 3]];
+	int note = notes[12 + arpeggio[arpseq[(i >> 13) & 15]][(i >> 7) & 3]];
 	arp_osc += note;
 	return ((arp_osc >> 5) & 128) - 1;
 }
@@ -30,7 +56,7 @@ static inline unsigned char voice_arp(unsigned long i)
 static inline unsigned char voice_bass(unsigned long i)
 {
 	static uint16_t bassosc = 0, flangeosc = 0;
-	int note = notes2[bassline[(i >> 13) & 15]];
+	int note = notes[bassline[(i >> 13) & 15]];
 	if (bassbeat[(i >> 10) & 7])
 		note <<= 1;
 	bassosc += note;
@@ -45,7 +71,7 @@ void fill(char *data)
 
 	for (int j = 0; j < 4096; j++)
 	{
-		unsigned char sample = (voice_bass(i) >> 1) + (voice_arp(i) >> 1);
+		unsigned char sample = voice_lead(i);// (voice_bass(i) >> 1) + (voice_arp(i) >> 1);
 		data[j] = sample;
 		i++;
 	}
