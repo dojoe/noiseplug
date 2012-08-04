@@ -6,25 +6,35 @@
 #include <MMSystem.h>
 #include "binary.h"
 
-int notes[25] = { 134, 142, 150, 159, 169, 179, 189, 201, 213, 225, 239, 253, 268, 284, 301, 319, 338, 358, 379, 401, 425, 451, 477, 506, 536 };
+int notes[37] = { 134, 142, 150, 159, 169, 179, 189, 201, 213, 225, 239, 253, 268, 284, 301, 319, 338, 358, 379, 401, 425, 451, 477, 506, 536, 568, 601, 637, 675, 715, 758, 803, 851, 901, 955, 1011, 1072 };
 
 int arpeggio[][4] = {
-	{ 0, 3, 7, 12 },
-	{ 2, 5, 7, 10 },
-	{ 1, 5, 7, 10 },
-	{ 1, 3, 5, 8 },
-	{ 1, 3, 5, 10 },
+	{ 12, 15, 19, 24 },
+	{ 15, 19, 22, 27 },
+	{ 10, 14, 17, 22 },
+//	{ 0, 2, 4, 7 },
+//	{ 0, 2, 4, 6 },
+//	{ 0, 2, 5, 9 },
+//	{ 0, 2, 5, 8 },
 };
-int arpseq[16] = { 0, 0, 1, 1, 2, 2, 4, 3, 0, 0, 1, 1, 2, 3, 4, 4 };
+int arpseq[16] = { 0, 0, 1, 2, 0, 0, 1, 2, 0, 0, 1, 2, 0, 0, 1, 2, };
 //int arptiming[32] = { 4, 2, 4, 2, 4, 2, 4, 5, 1, 2, 2 }
-const uint32_t arptiming = B32(00001100,00110000,11000011,11101100);
+const uint32_t arptiming = B32(00001100,00110000,11111011,00001100);
 
 int bassbeat[8] = { 0, 0, 1, 0, 0, 1, 0, 1 };
 int bassline[16] = { 12, 12, 15, 10, 12, 12, 17, 10, 12, 12, 15, 7, 8, 8, 3, 7 };
 
-#define LEADSIZE 28
-int leadmelody[LEADSIZE] = { 12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 5, 7, 3, 1, 0 };
-int leadtiming[LEADSIZE] = {  2, 1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1, 2, 2, 1, 2, 3, 28};
+#define LEADSIZE 56
+int leadmelody[LEADSIZE] = {
+	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 5, 7, 3, 1, 0, 
+	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 15, 0, 17, 19, 0, 22, 24, 26, 27, 24, 0,
+//	8, 3, 0, 8, 10, 12, 14, 15, 19, 17, 0, 12, 7, 0, 12, 14, 15
+};
+int leadtiming[LEADSIZE] = {
+	2, 1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1, 2, 2, 1, 2, 3, 28,
+	2, 1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1, 2, 2, 1, 2, 3, 28,
+//	2, 1, 1, 2, 1, 3, 2, 2, 1, 3, 14, 
+};
 
 static inline unsigned char voice_lead(unsigned long i)
 {
@@ -47,13 +57,13 @@ static inline unsigned char voice_lead(unsigned long i)
 	int note = notes[melody == 1 ? 0 : melody]; // TODO remove this hack by using note table
 	lead_osc += note;
 	lead_flange += note + (i & 1);
-	return (!melody) ? 0 : (((lead_osc >> 6) & 0x7F) + ((lead_osc >> 6) & 0x3F) + ((lead_flange >> 6) & 0x3F));  // xor also sounds cool
+	return (!melody) ? 0 : (((lead_osc >> 6) & 0x7F) + (((lead_osc >> 6) & 0x3F) ^ ((lead_flange >> 6) & 0x3F)));  // xor also sounds cool
 }
                      
 static inline unsigned char voice_arp(unsigned long i)
 {
 	static uint16_t arp_osc = 0;
-	int note = notes[12 + arpeggio[arpseq[(i >> 13) & 15]][(i >> 7) & 3]];
+	int note = notes[arpeggio[arpseq[(i >> 13) & 15]][(i >> 7) & 3]];
 	arp_osc += note;
 	return ((arptiming & (1 << (31 - (i >> 9)))) && (arp_osc & (1 << 12))) ? 0 : 140;
 	//return ((arp_osc >> 5) & 128) - 1;
@@ -77,7 +87,7 @@ void fill(char *data)
 
 	for (int j = 0; j < 4096; j++)
 	{
-		unsigned char sample = /*(voice_lead(i) >> 1) + */(voice_bass(i) >> 2) + (voice_arp(i) >> 2);
+		unsigned char sample = (voice_lead(i) >> 1) + (voice_bass(i) >> 2) + (voice_arp(i) >> 2);
 		data[j] = sample;
 		i++;
 	}
