@@ -21,14 +21,17 @@ int bassline[16] = { 12, 12, 15, 10, 12, 12, 17, 10, 12, 12, 15, 7, 8, 8, 3, 7 }
 
 #define LEADSIZE 28
 int leadmelody[LEADSIZE] = { 12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 5, 7, 3, 1, 0 };
-int leadtiming[LEADSIZE] = {  2, 1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1, 2, 2, 1, 2, 3, 27};
+int leadtiming[LEADSIZE] = {  2, 1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1,  1, 1,  1, 1,  1,  2, 1, 2, 2, 1, 2, 3, 28};
 
 static inline unsigned char voice_lead(unsigned long i)
 {
 	static uint8_t leadptr = 0xFF;
 	static uint16_t lead_osc = 0;
-	static uint8_t leadtimer = 0;
+	static uint16_t lead_flange = 0;
+	static uint8_t leadtimer = 1;
 
+	if (0 == (i & 0x3FF))
+		leadtimer--;
 	if (0 == leadtimer)
 	{
 		leadptr++;
@@ -38,11 +41,10 @@ static inline unsigned char voice_lead(unsigned long i)
 	}
 
 	uint8_t melody = leadmelody[leadptr];
-	int note = notes[melody == 1 ? 0 : melody];
+	int note = notes[melody == 1 ? 0 : melody]; // TODO remove this hack by using note table
 	lead_osc += note;
-	if (0 == (i & 0x3FF))
-		leadtimer--;
-	return (!melody) ? 0 : ((lead_osc >> 6) & 0x7F);
+	lead_flange += note + 1;//(i & 1);
+	return (!melody) ? 0 : (((lead_osc >> 6) & 0x7F) + ((lead_flange >> 6) & 0x3F));  // xor also sounds cool
 }
                      
 static inline unsigned char voice_arp(unsigned long i)
@@ -71,7 +73,7 @@ void fill(char *data)
 
 	for (int j = 0; j < 4096; j++)
 	{
-		unsigned char sample = voice_lead(i);// (voice_bass(i) >> 1) + (voice_arp(i) >> 1);
+		unsigned char sample = (voice_lead(i) >> 1) + (voice_bass(i) >> 1);// + (voice_arp(i) >> 1);
 		data[j] = sample;
 		i++;
 	}
