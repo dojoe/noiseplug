@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <malloc.h>
 #include <Windows.h>
@@ -20,16 +21,22 @@ int bassline[16] = { 12, 12, 15, 10, 12, 12, 17, 10, 12, 12, 15, 7, 8, 8, 3, 7 }
                      
 static inline unsigned char voice_arp(unsigned long i)
 {
-	int note = notes2[12 + arpeggio[arpseq[(i >> 13) & 15]][(i >> 8) & 3]];
-	return (((i * note) >> 5) & 128) - 1;
-//	return (((i << 1) / (notes[arpeggio[arpseq[(i >> 13) & 15]][(i >> 8) & 3]] >> 2)) & 1) << 7;
+	static uint16_t arp_osc = 0;
+	int note = notes2[12 + arpeggio[arpseq[(i >> 13) & 15]][(i >> 7) & 3]];
+	arp_osc += note;
+	return ((arp_osc >> 5) & 128) - 1;
 }
 
 static inline unsigned char voice_bass(unsigned long i)
 {
+	static uint16_t bassosc = 0, flangeosc = 0;
 	int note = notes2[bassline[(i >> 13) & 15]];
-	int beat = bassbeat[(i >> 10) & 7] ? 7 : 8;
-	return (((i * note) >> beat) & 0x7F) + (((i * note + i) >> beat) & 0x7F);
+	if (bassbeat[(i >> 10) & 7])
+		note <<= 1;
+	bassosc += note;
+	flangeosc += note + 1;
+	unsigned char ret = ((bassosc >> 8) & 0x7F) + ((flangeosc >> 8) & 0x7F);
+	return ((i >> 6) & 0xF) == 0xF ? 0 : ret;
 }
 
 void fill(char *data)
@@ -38,8 +45,8 @@ void fill(char *data)
 
 	for (int j = 0; j < 4096; j++)
 	{
-		unsigned char sample = /*(voice_bass(i) >> 1) + */(voice_arp(i) >> 1);
-		data[j] = sample - 128;
+		unsigned char sample = (voice_bass(i) >> 1) + (voice_arp(i) >> 1);
+		data[j] = sample;
 		i++;
 	}
 }
