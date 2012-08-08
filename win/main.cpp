@@ -135,23 +135,28 @@ static inline unsigned char voice_bass(unsigned long i)
 	return ((i >> 6) & 0xF) == 0xF ? 0 : ret;
 }
 
-void fill(char *data)
+static inline uint8_t next_sample()
 {
 	static unsigned long i = 0;//x40000;
+	uint8_t ret = (voice_lead(i, 0) >> 1) + THREEQUARTERS(voice_lead(i, 1) >> 2) + (voice_lead(i, 2) >> 3) + (voice_bass(i) >> 2) + (voice_arp(i) >> 2);
+	i++;
+	if ((i >> 13) == ARPSIZE)
+		i = 16 << 13;
+	return ret;
+}
+
+void fill(char *data)
+{
 	static uint8_t max = 0;
 
 	for (int j = 0; j < 4096; j++)
 	{
-		unsigned char sample = (voice_lead(i, 0) >> 1) + THREEQUARTERS(voice_lead(i, 1) >> 2) + (voice_lead(i, 2) >> 3) + (voice_bass(i) >> 2) + (voice_arp(i) >> 2);
-		data[j] = sample;
-		if (sample > max)
+		data[j] = next_sample();
+		if (data[j] > max)
 		{
-			max = sample;
+			max = data[j];
 			printf("%x\n", max);
 		}
-		i++;
-		if ((i >> 13) == ARPSIZE)
-			i = 16 << 13;
 	}
 }
 
