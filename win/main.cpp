@@ -6,6 +6,11 @@
 #include <MMSystem.h>
 #include "binary.h"
 
+static inline uint8_t THREEQUARTERS(uint8_t x)
+{
+	return (x >> 2) + (x >> 1);
+}
+
 int notes[37] = { 134, 142, 150, 159, 169, 179, 189, 201, 213, 225, 239, 253, 268, 284, 301, 319, 338, 358, 379, 401, 425, 451, 477, 506, 536, 568, 601, 637, 675, 715, 758, 803, 851, 901, 955, 1011, 1072 };
 
 int arpeggio[][4] = {
@@ -51,8 +56,8 @@ int bassline[BASSSIZE] = {
 	8, 8, 10, 10, 12, 12, 5, 5, 8, 8, 10, 10,
 };
 
-#define LEADSIZE 158
-int leadmelody[LEADSIZE] = { 0, //0, 0,
+#define LEADSIZE 159
+int leadmelody[LEADSIZE] = { 0, 0, 0, 0,
 	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 5, 7, 3, 1, 0, 
 	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 15, 0, 17, 19, 0, 22, 24, 26, 27, 24, 0,
 	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 5, 7, 3, 1, 0, 
@@ -60,7 +65,7 @@ int leadmelody[LEADSIZE] = { 0, //0, 0,
 	8, 3, 0, 8, 10, 12, 14, 15, 19, 17, 0, 12, 7, 0, 12, 14, 15, 14, 15, 19, 17, 0, 
 	8, 3, 0, 8, 10, 12, 14, 15, 19, 17, 15, 0, 14, 15, 17, 19, 0, 15, 14, 15, 12,
 };
-int leadtiming[LEADSIZE] = { 0, //131, 125,
+int leadtiming[LEADSIZE] = { 0, 62, 200, 250,
 	4, 2, 2,  2, 2,  2,  4, 2,  2, 2,  2, 2,  2,  4, 2,  2, 2,  2, 2,  2,  4, 2, 4, 4, 2, 4, 6, 56,
 	4, 2, 2,  2, 2,  2,  4, 2,  2, 2,  2, 2,  2,  4, 2,  2, 2,  2, 2,  2,  4, 2, 4, 4, 2, 4, 6, 56,
 	4, 2, 2,  2, 2,  2,  4, 2,  2, 2,  2, 2,  2,  4, 2,  2, 2,  2, 2,  2,  4, 2, 4, 4, 2, 4, 6, 56,
@@ -74,9 +79,11 @@ struct leadvoice_s {
 	uint16_t osc;
 } leads[3] = {
 	{ 0, 1, 0 },
-	{ 0, 3, 0 },
-	{ 0, 5, 0 },
+	{ 0, 3, 1601 },
+	{ 0, 5, 3571 },
 };
+
+uint8_t boosts;
 
 static unsigned char voice_lead(unsigned long i, int voice_nr)
 {
@@ -84,23 +91,27 @@ static unsigned char voice_lead(unsigned long i, int voice_nr)
 #define lead_osc leads[voice_nr].osc
 #define leadtimer leads[voice_nr].timer
 
+	if (0 == (i & 0x0FF))
+		boosts &= ~(1 << voice_nr);
 	if (0 == (i & 0x1FF))
 		leadtimer--;
 	if (0 == leadtimer)
 	{
 		leadptr++;
 		if (leadptr == LEADSIZE)
-			leadptr = 2;
+			leadptr = 3;
 		leadtimer = leadtiming[leadptr];
+		boosts |= 1 << voice_nr;
 	}
 
 	uint8_t melody = leadmelody[leadptr];
 	int note = notes[melody == 1 ? 0 : melody]; // TODO remove this hack by using note table
 	lead_osc += note;
 //	lead_flange += note + (i & 1);
+	uint8_t sample = ((lead_osc >> 6) & 0x7F) + ((lead_osc >> 6) & 0x3F);// + ((lead_flange >> 6) & 0x3F);  // xor also sounds cool
 	//return (!melody) ? 0 : ((lead_osc >> 5) & 0x80) + ((lead_flange >> 6) & 0x3F);
 	//return (!melody) ? 0 : ((lead_osc & 0x1000) ? ((lead_osc >> 6) & 0x3F) | 0xC0 : 0x40 - ((lead_osc >> 6) & 0x3F));
-	return (!melody) ? 0 : ((lead_osc >> 6) & 0x7F) + ((lead_osc >> 6) & 0x3F);// + ((lead_flange >> 6) & 0x3F);  // xor also sounds cool
+	return (!melody) ? 0 : ((boosts & (1 << voice_nr)) ? sample : THREEQUARTERS(sample));
 }
                      
 static inline unsigned char voice_arp(unsigned long i)
@@ -126,12 +137,12 @@ static inline unsigned char voice_bass(unsigned long i)
 
 void fill(char *data)
 {
-	static unsigned long i = 0x40000;
+	static unsigned long i = 0;//x40000;
 	static uint8_t max = 0;
 
 	for (int j = 0; j < 4096; j++)
 	{
-		unsigned char sample = (voice_lead(i, 0) >> 1) + ((voice_lead(i, 1) >> 4) * 3) + (voice_lead(i, 2) >> 3) + (voice_bass(i) >> 2) + (voice_arp(i) >> 2);
+		unsigned char sample = (voice_lead(i, 0) >> 1) + THREEQUARTERS(voice_lead(i, 1) >> 2) + (voice_lead(i, 2) >> 3) + (voice_bass(i) >> 2) + (voice_arp(i) >> 2);
 		data[j] = sample;
 		if (sample > max)
 		{
