@@ -30,12 +30,21 @@ int arpeggio[][4] = {
 
 #define ARPSIZE 76
 
+#if 0
 uint8_t arpseq1[4][8] = {
 	{ 0, 0, 1, 2, 0, 0, 6, 2, },
 	{ 0, 0, 1, 2, 0, 0, 1, 7, },
 	{ 0, 0, 1, 2, 0, 0, 1, 2, },
 	{ 3, 3, 2, 2, 0, 0, 4, 5, },
 };
+#else
+uint8_t arpseq1[4][4] = {
+	{ 0x00, 0x12, 0x00, 0x62 },
+	{ 0x00, 0x12, 0x00, 0x17 },
+	{ 0x00, 0x12, 0x00, 0x12 },
+	{ 0x33, 0x22, 0x00, 0x45 },
+};
+#endif
 int arpseq2[] = { 0, 1, 0, 1, 0, 1, 0, 2, 3, 3 };
 //int arptiming[32] = { 4, 2, 4, 2, 4, 2, 4, 5, 1, 2, 2 }
 const uint32_t arptiming = B32(00001100,00110000,11111011,00001100);
@@ -113,7 +122,12 @@ static inline unsigned char voice_arp(unsigned long i)
 {
 	static uint16_t arp_osc = 0;
 	uint8_t arpptr = i >> 13;
-	int note = notes[arpeggio[arpseq1[arpptr >> 3][arpptr & 7]][(i >> 7) & 3]];
+	uint8_t arpptr2 = arpseq1[arpseq2[arpptr >> 3]][(arpptr >> 1) & 3];
+	if (arpptr & 1)
+		arpptr2 &= 0xF;
+	else
+		arpptr2 >>= 4;
+	int note = notes[arpeggio[arpptr2][(i >> 7) & 3]];
 	arp_osc += note;
 	return ((arptiming & (1 << (31 - (i >> 9)))) && (arp_osc & (1 << 12)) && ((i >> 13) > 15)) ? 0 : 140;
 	//return ((arp_osc >> 5) & 128) - 1;
