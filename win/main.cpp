@@ -57,18 +57,16 @@ const int bassline[BASSSIZE] = {
 	8, 8, 10, 10, 12, 12, 5, 5,	8, 8, 10, 10,
 };
 
-#if 0
 const uint8_t leadnotes[] = {
 	0xFF, 0, 3, 5, 7, 8, 10, 12, 14, 15, 17, 19, 20, 22, 24, 26, 27
 };
 
 const uint8_t leadtimes[] = {
-
+	1, 2, 3, 4, 5, 6, 28, 56
 };
-#endif
 
 #define LEADSIZE 180
-const int leadmelody[LEADSIZE] = { 0, 0, 0, 0,
+const int leadmelody[LEADSIZE] = {
 	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 0, 5, 7, 3, 1, 0, 
 	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 15, 0, 17, 19, 0, 22, 0, 24, 26, 27, 24, 0,
 	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 0, 5, 7, 3, 1, 0, 
@@ -76,7 +74,7 @@ const int leadmelody[LEADSIZE] = { 0, 0, 0, 0,
 	8, 3, 0, 8, 10, 12, 0, 14, 15, 19, 17, 0, 12, 7, 0, 12, 14, 15, 0, 14, 15, 19, 17, 0, 
 	8, 3, 0, 8, 10, 12, 14, 0, 15, 19, 17, 15, 0, 14, 15, 17, 19, 0, 15, 14, 15, 12,
 };
-const int leadtiming[LEADSIZE] = { 0, 62, 200, 250,
+const int leadtiming[LEADSIZE] = {
 	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 56,
 	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 56,
 	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 56,
@@ -89,9 +87,9 @@ struct leadvoice_s {
 	uint8_t ptr, timer;
 	uint16_t osc;
 } leads[3] = {
-	{ 0, 1, 0 },
-	{ 0, 3, 1601 },
-	{ 0, 5, 3571 },
+	{ LEADSIZE, 1, 0 },
+	{ LEADSIZE, 3, 1601 },
+	{ LEADSIZE, 5, 3571 },
 };
 
 uint8_t boosts;
@@ -102,6 +100,17 @@ static unsigned char voice_lead(unsigned long i, int voice_nr)
 #define lead_osc leads[voice_nr].osc
 #define leadtimer leads[voice_nr].timer
 
+	if (leadptr == LEADSIZE)
+	{
+		if (i == (0x40000 + 0x400 * voice_nr))
+		{
+			leadptr = -1;
+			leadtimer = 1;
+		}
+		else
+			return 0;
+	}
+
 	if (0 == (i & 0x0FF))
 		boosts &= ~(1 << voice_nr);
 	if (0 == (i & 0x1FF))
@@ -109,11 +118,10 @@ static unsigned char voice_lead(unsigned long i, int voice_nr)
 	if (0 == leadtimer)
 	{
 		leadptr++;
-		if (leadptr == LEADSIZE)
-			leadptr = 3;
 		leadtimer = leadtiming[leadptr];
 		boosts |= 1 << voice_nr;
 	}
+
 
 	uint8_t melody = leadmelody[leadptr];
 	int note = notes[melody == 1 ? 0 : melody]; // TODO remove this hack by using note table
