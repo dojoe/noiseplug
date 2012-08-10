@@ -62,26 +62,41 @@ const uint8_t leadnotes[] = {
 };
 
 const uint8_t leadtimes[] = {
-	1, 2, 3, 4, 5, 6, 28, 56
+	1, 2, 3, 4, 5, 6, 28, 14
 };
 
-#define LEADSIZE 180
-const int leadmelody[LEADSIZE] = {
-	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 0, 5, 7, 3, 1, 0, 
-	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 15, 0, 17, 19, 0, 22, 0, 24, 26, 27, 24, 0,
-	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 10, 0, 7, 0, 5, 7, 3, 1, 0, 
-	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14, 0, 15, 0, 17, 19, 0, 22, 0, 24, 26, 24, 20, 0,
+const int leadmelody[] = {
+	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14,
+	0, 12, 0, 14, 10, 0, 7, 0, 5, 7, 3, 1, 0, 0, 0, 0,
+	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14,
+	0, 15, 0, 17, 19, 0, 22, 0, 24, 26, 27, 24, 0, 0, 0, 0,
+	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14,
+	0, 12, 0, 14, 10, 0, 7, 0, 5, 7, 3, 1, 0, 0, 0, 0, 
+	12, 7, 0, 12, 0, 14, 15, 0, 14, 0, 12, 0, 14, 15, 0, 14,
+	0, 15, 0, 17, 19, 0, 22, 0, 24, 26, 24, 20, 0, 0, 0, 0,
 	8, 3, 0, 8, 10, 12, 0, 14, 15, 19, 17, 0, 12, 7, 0, 12, 14, 15, 0, 14, 15, 19, 17, 0, 
 	8, 3, 0, 8, 10, 12, 14, 0, 15, 19, 17, 15, 0, 14, 15, 17, 19, 0, 15, 14, 15, 12,
 };
-const int leadtiming[LEADSIZE] = {
-	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 56,
-	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 56,
-	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 56,
-	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 56,
+const int leadtiming[] = {
+	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 14, 14, 14, 14,
+	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 14, 14, 14, 14,
+	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 14, 14, 14, 14,
+	4, 2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1,  2, 2,  2, 2,  2,  5, 1, 3, 1, 4, 2, 4, 6, 14, 14, 14, 14,
 	4, 2, 2, 4, 2, 5, 1, 4, 4, 2, 6, 28, 4, 2, 2, 4, 2, 5, 1, 4, 4, 2, 6, 28, 
 	4, 2, 2, 4, 2,  6,  2,  2, 4,  2,  6,  2,  2,  4,  2,  6,  2, 2,  4,  2,  4,  4,
 };
+
+const uint8_t leaddata[] = {
+	0x67, 0x24, 0x20, 0x27, 0x20, 0x28, 0x89, 0x0, 0x28, 0x20, 0x27, 0x20, 0x28, 0x89, 0x0, 0x28,
+	0x20, 0x27, 0x20, 0x28,	0x86, 0x0, 0x44, 0x0, 0x63, 0x24, 0x62, 0xA1, 0xE0, 0xE0, 0xE0, 0xE0,
+	0x20, 0x29, 0x20, 0x2A, 0x8B, 0x0, 0x4D, 0x0, 0x6E, 0x2F, 0x70, 0xAE, 0xE0, 0xE0, 0xE0, 0xE0,
+	0x20, 0x29, 0x20, 0x2A, 0x8B, 0x0, 0x4D, 0x0, 0x6E, 0x2F, 0x6E, 0xAC, 0xE0, 0xE0, 0xE0, 0xE0,
+	0x65, 0x22, 0x20, 0x65, 0x26, 0x87, 0x0, 0x68, 0x69, 0x2B, 0xAA, 0xC0, 0x67, 0x24, 0x20, 0x67,
+	0x28, 0x89, 0x0, 0x68, 0x69, 0x2B, 0xAA, 0xC0, 0x65, 0x22, 0x20, 0x65, 0x26, 0xA7, 0x28, 0x20,
+	0x69, 0x2B, 0xAA, 0x29, 0x20, 0x68, 0x29, 0xAA, 0x2B, 0x20, 0x69, 0x28, 0x69, 0x67,
+};
+const uint8_t leadseq[] = { 0, 1, 0, 2, 0, 1, 0, 3, 4, 5, 6 };
+#define LEADSIZE 174
 
 struct leadvoice_s {
 	uint8_t ptr, timer;
@@ -118,19 +133,19 @@ static unsigned char voice_lead(unsigned long i, int voice_nr)
 	if (0 == leadtimer)
 	{
 		leadptr++;
-		leadtimer = leadtiming[leadptr];
+		leadtimer = leadtimes[leaddata[(leadseq[leadptr >> 4] << 4) | (leadptr & 0xF)] >> 5];
 		boosts |= 1 << voice_nr;
 	}
 
 
-	uint8_t melody = leadmelody[leadptr];
-	int note = notes[melody == 1 ? 0 : melody]; // TODO remove this hack by using note table
+	uint8_t melody = leadnotes[leaddata[(leadseq[leadptr >> 4] << 4) | (leadptr & 0xF)] & 0x1F];
+	int note = notes[melody]; // TODO remove this hack by using note table
 	lead_osc += note;
 //	lead_flange += note + (i & 1);
 	uint8_t sample = ((lead_osc >> 6) & 0x7F) + ((lead_osc >> 6) & 0x3F);// + ((lead_flange >> 6) & 0x3F);  // xor also sounds cool
 	//return (!melody) ? 0 : ((lead_osc >> 5) & 0x80) + ((lead_flange >> 6) & 0x3F);
 	//return (!melody) ? 0 : ((lead_osc & 0x1000) ? ((lead_osc >> 6) & 0x3F) | 0xC0 : 0x40 - ((lead_osc >> 6) & 0x3F));
-	return (!melody) ? 0 : ((boosts & (1 << voice_nr)) ? sample : THREEQUARTERS(sample));
+	return (melody == 0xFF) ? 0 : ((boosts & (1 << voice_nr)) ? sample : THREEQUARTERS(sample));
 }
                      
 static inline unsigned char voice_arp(unsigned long i)
@@ -167,7 +182,7 @@ static inline unsigned char voice_bass(unsigned long i)
 
 static inline uint8_t next_sample()
 {
-	static unsigned long i = 0;//x40000;
+	static unsigned long i = 0x40000;
 	uint8_t ret = (voice_lead(i, 0) >> 1) + THREEQUARTERS(voice_lead(i, 1) >> 2) + (voice_lead(i, 2) >> 3) + (voice_bass(i) >> 2) + (voice_arp(i) >> 2);
 	i++;
 	if ((i >> 13) == ARPSIZE)
@@ -196,6 +211,18 @@ static const WAVEFORMATEX fmt = {
 
 int main(int argc, char *argv[])
 {
+	for (int i = 0; i < LEADSIZE; i++)
+	{
+		int note, time;
+		for (note = 0; note < 17; note++)
+			if (leadnotes[note] == leadmelody[i])
+				break;
+		for (time = 0; time < 8; time++)
+			if (leadtimes[time] == leadtiming[i])
+				break;
+		printf("0x%X, ", note | (time << 5));
+	}
+
 	HWAVEOUT out;
 	HRESULT rc = waveOutOpen(&out, WAVE_MAPPER, &fmt, NULL, NULL, CALLBACK_NULL);
 	if (rc != MMSYSERR_NOERROR)
