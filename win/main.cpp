@@ -54,10 +54,7 @@ const uint32_t arptiming = B32(00001100,00110000,11111011,00001100);
 const int bassbeat[8] = { 0, 0, 1, 0, 0, 1, 0, 1 };
 const int bassline[BASSSIZE] = {
 	12, 12, 15, 10, 12, 12, 17, 10, 12, 12, 15, 7, 8, 8, 3, 7,
-	12, 12, 15, 10, 12, 12, 17, 10, 12, 12, 15, 7, 8, 8, 3, 7,
-	12, 12, 15, 10, 12, 12, 17, 10, 12, 12, 15, 7, 8, 8, 3, 7,
-	12, 12, 15, 10, 12, 12, 17, 10, 12, 12, 15, 7, 8, 8, 3, 7,
-	8, 8, 10, 10, 12, 12, 5, 5, 8, 8, 10, 10,
+	8, 8, 10, 10, 12, 12, 5, 5,	8, 8, 10, 10,
 };
 
 #define LEADSIZE 159
@@ -138,7 +135,10 @@ static inline unsigned char voice_arp(unsigned long i)
 static inline unsigned char voice_bass(unsigned long i)
 {
 	static uint16_t bassosc = 0, flangeosc = 0;
-	int note = notes[bassline[i >> 13]];
+	uint8_t bassptr = (i >> 13) & 0xF;
+	if (i >> 19)
+		bassptr |= 0x10;
+	int note = notes[bassline[bassptr]];
 	if (bassbeat[(i >> 10) & 7])
 		note <<= 1;
 	bassosc += note;
