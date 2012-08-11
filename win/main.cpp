@@ -102,15 +102,19 @@ static unsigned char voice_lead(unsigned long i, int voice_nr)
 		boosts &= ~(1 << voice_nr);
 	if (0 == (i & 0x1FF))
 		leadtimer--;
+
+	if (0 == leadtimer)
+		leadptr++;
+
+	uint8_t data = leaddata[(leadseq[leadptr >> 4] << 4) | (leadptr & 0xF)];
+
 	if (0 == leadtimer)
 	{
-		leadptr++;
-		leadtimer = leadtimes[leaddata[(leadseq[leadptr >> 4] << 4) | (leadptr & 0xF)] >> 5];
+		leadtimer = leadtimes[data >> 5];
 		boosts |= 1 << voice_nr;
 	}
 
-
-	uint8_t melody = leaddata[(leadseq[leadptr >> 4] << 4) | (leadptr & 0xF)] & 0x1F;
+	uint8_t melody = data & 0x1F;
 	lead_osc += notes[melody];
 	uint8_t sample = ((lead_osc >> 6) & 0x7F) + ((lead_osc >> 6) & 0x3F);
 	return (0 == melody) ? 0 : ((boosts & (1 << voice_nr)) ? sample : THREEQUARTERS(sample));
