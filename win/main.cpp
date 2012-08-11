@@ -117,11 +117,10 @@ static unsigned char voice_lead(unsigned long i, int voice_nr)
 static inline unsigned char voice_arp(unsigned long i)
 {
 	static uint16_t arp_osc = 0;
-	uint8_t arpptr = i >> 13;
-	uint8_t arpptr2 = arpseq1[arpseq2[arpptr >> 3]][(arpptr >> 1) & 3];
-	if (!(arpptr & 1))
+	uint8_t arpptr2 = arpseq1[arpseq2[i >> 16]][(i >> 14) & 3];
+	if (!(i & (1 << 13)))
 		arpptr2 >>= 4;
-	arpptr = arpeggio[arpptr2 & 0xF][(i >> 8) & 1];
+	uint8_t arpptr = arpeggio[arpptr2 & 0xF][(i >> 8) & 1];
 	if (!(i & 0x80))
 		arpptr >>= 4;
 
