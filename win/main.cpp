@@ -45,7 +45,9 @@ const uint8_t arpseq1[4][4] = {
 };
 #endif
 const int arpseq2[] = { 0, 1, 0, 1, 0, 1, 0, 2, 3, 3 };
-const uint32_t arptiming = B32(00001100,00110000,11111011,00001100);
+
+//const uint32_t arptiming = B32(00001100,00110000,11111011,00001100);
+const uint8_t arptiming[4] = { 0x0C, 0x30, 0xFB, 0x0C };
 
 const int bassbeat[8] = { 0, 0, 1, 0, 0, 1, 0, 1 };
 const int bassline[] = {
@@ -130,7 +132,7 @@ static inline unsigned char voice_arp(unsigned long i)
 	if ((i >> 13) <= 15)
 		return 0;
 
-	if (!(arptiming & (1 << (31 - (i >> 9)))))
+	if (!(arptiming[(i >> 12) & 3] & (1 << (7 - ((i >> 9) & 7)))))
 		return 0;
 
 	return (arp_osc & (1 << 12)) ? 0 : 35;
