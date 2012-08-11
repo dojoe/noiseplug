@@ -15,13 +15,19 @@ PORTB = 0x02
 DDRB = 0x01
 PINB = 0x00
 
+LEADSIZE = 174
+LEADINIT1 = 1601
+LEADINIT2 = 3571
+
 .section .bss
 
 	.comm int_ctr, 1
 	.comm i, 3
+
 	.comm lead1, 4
 	.comm lead2, 4
 	.comm lead3, 4
+	
 	.comm bassosc, 2
 	.comm bassflange, 2
 	.comm arposc, 2
@@ -56,10 +62,23 @@ main_cont:
 	clr r31
 	ldi r30, 0x40
 	
-clearsram:
+clear_sram:
 	st Z+, r16
 	sbrs r30, 5
-	rjmp clearsram
+	rjmp clear_sram
+	
+;	ldi r18, LEADSIZE
+;	sts leadptr1, r18
+;	sts leadptr2, r18
+;	sts leadptr3, r18
+;	ldi r18, hi8(LEADINIT1)
+;	sts leadosc2, r18
+;	ldi r18, lo8(LEADINIT1)
+;	sts leadosc2 + 1, r18
+;	ldi r18, hi8(LEADINIT2)
+;	sts leadosc3, r18
+;	ldi r18, lo8(LEADINIT2)
+;	sts leadosc3 + 1, r18
 
 	out CCP, r17
 	out CLKPSR, r16
@@ -263,11 +282,173 @@ arptiming_noshift:
 	subi r16, -35
 	
 noarp:
+
+; ==== LEAD ===
+	clr r29
+	ldi r28, lead1
+	ldi r24, 0
+	ldi r25, ~1
+	rcall lead_voice
+	add r16, r23
+	
+	;ldi r28, lead2
+	;ldi r24, 4
+	;ldi r25, ~2
+	;rcall lead_voice
+	;lsr r23
+	;lsr r23
+	;add r16, r23
+	;lsr r23
+	;add r16, r23
+	
+	;ldi r28, lead3
+	;ldi r24, 8
+	;ldi r25, ~4
+	;rcall lead_voice
+	;lsr r23
+	;lsr r23
+	;add r16, r23
+
 	out OCR0AL, r16
 	
 	cbi PORTB, 2
 	rjmp mainloop
 
+; input:
+;   dataset pointer in Y
+;   inverted boost mask in r25
+;   voice delay (4 * voice_nr) in r24
+; returns sample in r23
+
+skiplead_top:
+	clr r23
+	ret
+
+lead_voice:
+	ld r23, Y+					; r23 = leadptr
+	cpi r23, LEADSIZE
+	brne noleadsetup
+	
+	cpi r17, 4
+	brne skiplead_top
+	cp r18, r24					; r24 no longer needed now!
+	brne skiplead_top
+	
+	dec r28
+	ldi r20, -1
+	st Y+, r20
+	ldi r20, 1
+	st Y, r20
+
+noleadsetup:
+	lds r26, boost				; r26 = boost
+	ld r27, Y					; r27 = leadtimer
+	
+	; if (0 == (i & 0xFF)): clear boost
+	tst r19
+	brne checkleadtimer
+	
+		and r26, r25
+		sts boost, r26
+	
+		; if (0 == i & 0x1FF): leadtimer--
+		sbrc r18, 0
+		rjmp checkleadtimer
+	
+			dec r27
+			st Y, r27
+	
+checkleadtimer:
+	; if (0 == leadtimer): leadptr++
+	tst r27
+	brne getleaddata
+	
+		; leadptr++
+		dec r28
+		inc r23
+		st Y+, r23
+	
+getleaddata:
+	; leadptr(4..7) = leadseq[leadptr >> 4];
+	mov r30, r23
+	andi r23, 0xF
+	swap r30
+	andi r30, 0xF
+	subi r30, lo8(NULL-leadseq)
+	ld r30, Z
+	swap r30
+	or r30, r23
+	
+	; data = leaddata[leadptr]
+	subi r30, lo8(NULL-leaddata)
+	ld r24, Z					; r24 = data!
+	
+	; if (0 == leadtimer) {
+	neg r25
+	tst r27
+	brne noleadupdate
+	
+		; leadtimer = leadtimes[data >> 5]
+		mov r30, r24
+		swap r30
+		lsr r30
+		andi r30, 7
+		subi r30, lo8(NULL-leadtimes)
+		ld r27, Z
+		st Y, r27
+	
+		; boosts |= boostmask
+		or r26, r25
+		sts boost, r26
+	
+noleadupdate:
+	; data &= 0x1F
+	andi r24, 0x1F
+	
+	; note = notes[data]
+	ldi r30, lo8(notes)
+	lsl r24
+	add r30, r24
+	ld r21, Z+
+	ld r20, Z
+	
+	; leadosc += note
+	inc r28
+	ld r22, Y+
+	ld r23, Y
+	add r23, r21
+	adc r22, r20
+	st Y, r23
+	st -Y, r22
+	
+	; sample = ((lead_osc >> 7) & 0x3F) + ((lead_osc >> 7) & 0x1F)
+	rol r23
+	rol r22
+	andi r22, 0x3F
+	mov r23, r22
+	andi r22, 0x1F
+	add r23, r22					; r23 = final boosted sample!
+	
+	; if (!(boost & boostmask)): take three quarters
+	and r26, r25
+	brne noreduce
+	
+	lsr r23
+	mov r22, r23
+	lsr r23
+	add r23, r22
+	
+noreduce:
+	; if (data == 0) return 0;
+	tst r24
+	breq skiplead
+	
+	ret
+
+skiplead:
+	clr r23
+	ret
+	
 	.org 0x300
 	
 notes:
@@ -303,3 +484,18 @@ arpeggio:
 	.byte	0x24, 0x58
 	.byte	0x57, 0xAD
 	.byte	0x35, 0x9B
+	
+leadtimes:
+	.byte	1, 2, 3, 4, 5, 6, 28, 14
+
+leaddata:
+	.byte	0x67, 0x24, 0x20, 0x27, 0x20, 0x28, 0x89, 0x0, 0x28, 0x20, 0x27, 0x20, 0x28, 0x89, 0x0, 0x28
+	.byte	0x20, 0x27, 0x20, 0x28, 0x86, 0x0, 0x44, 0x0, 0x63, 0x24, 0x62, 0xA1, 0xE0, 0xE0, 0xE0, 0xE0
+	.byte	0x20, 0x29, 0x20, 0x2A, 0x8B, 0x0, 0x4E, 0x0, 0x6F, 0x30, 0x71, 0xAF, 0xE0, 0xE0, 0xE0, 0xE0
+	.byte	0x20, 0x29, 0x20, 0x2A, 0x8B, 0x0, 0x4E, 0x0, 0x6F, 0x30, 0x6F, 0xAC, 0xE0, 0xE0, 0xE0, 0xE0
+	.byte	0x65, 0x22, 0x20, 0x65, 0x26, 0x87, 0x0, 0x68, 0x69, 0x2B, 0xAA, 0xC0, 0x67, 0x24, 0x20, 0x67
+	.byte	0x28, 0x89, 0x0, 0x68, 0x69, 0x2B, 0xAA, 0xC0, 0x65, 0x22, 0x20, 0x65, 0x26, 0xA7, 0x28, 0x20
+	.byte	0x69, 0x2B, 0xAA, 0x29, 0x20, 0x68, 0x29, 0xAA, 0x2B, 0x20, 0x69, 0x28, 0x69, 0x67
+
+leadseq:
+	.byte	0, 1, 0, 2, 0, 1, 0, 3, 4, 5, 6
