@@ -116,7 +116,7 @@ static unsigned char voice_lead(unsigned long i, int voice_nr)
 
 	uint8_t melody = data & 0x1F;
 	lead_osc += notes[melody];
-	uint8_t sample = ((lead_osc >> 6) & 0x7F) + ((lead_osc >> 6) & 0x3F);
+	uint8_t sample = ((lead_osc >> 7) & 0x3F) + ((lead_osc >> 7) & 0x1F);
 	return (0 == melody) ? 0 : ((boosts & (1 << voice_nr)) ? sample : THREEQUARTERS(sample));
 }
                      
@@ -161,7 +161,7 @@ static inline unsigned char voice_bass(unsigned long i)
 static inline uint8_t next_sample()
 {
 	static unsigned long i = 0;//x40000;
-	uint8_t ret = (voice_lead(i, 0) >> 1) + THREEQUARTERS(voice_lead(i, 1) >> 2) + (voice_lead(i, 2) >> 3) + (voice_bass(i) >> 2) + voice_arp(i);
+	uint8_t ret = voice_lead(i, 0) + THREEQUARTERS(voice_lead(i, 1) >> 1) + (voice_lead(i, 2) >> 2) + (voice_bass(i) >> 2) + voice_arp(i);
 	i++;
 	if ((i >> 13) == ARPSIZE)
 		i = 16 << 13;
