@@ -1,6 +1,8 @@
 .global __vectors
 
 SREG = 0x3F
+SPH = 0x3E
+SPL = 0x3D
 CCP = 0x3C
 SMCR = 0x3A
 CLKPSR = 0x36
@@ -65,7 +67,11 @@ clear_sram:
 	st Z+, r16
 	sbrs r30, 5
 	rjmp clear_sram
-	
+
+	ldi r18, 0x5F
+	out SPL, r18
+	out SPH, r16
+
 	ldi r18, LEADSIZE
 	sts lead1, r18
 	sts lead2, r18
@@ -98,8 +104,10 @@ clear_sram:
 	clr r29
 	
 	; init i
-	ldi r17, 3
-	ldi r18, 0xF0
+	clr r17
+	clr r18
+	;ldi r17, 3
+	;ldi r18, 0xF0
 	clr r19
 
 mainloop:
@@ -289,6 +297,9 @@ noarp:
 	ldi r24, 0
 	ldi r25, ~1
 	rcall lead_voice
+	lsr r23
+	add r16, r23
+	lsr r23
 	add r16, r23
 	
 	ldi r28, lead2
