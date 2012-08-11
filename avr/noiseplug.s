@@ -31,6 +31,7 @@ PINB = 0x00
 .section .text
 
 __vectors:
+NULL:
 	clr r16
 	ldi r17, 0xD8
 	out PUEB, r16
@@ -181,15 +182,98 @@ addbass:
 	add r16, r24
 	
 noaddbass:	
+
+; ==== ARPEGGIO ====
+	; arpptr(r30) = arpseq1[arpseq2[i >> 16]][(i >> 14) & 3]
+	mov r30, r17
+	subi r30, lo8(NULL-arpseq2)
+	ld r30, Z
+	lsl r30
+	lsl r30
+	mov r20, r18
+	swap r20
+	lsr r20
+	lsr r20
+	andi r20, 3
+	or r30, r20
+	subi r30, lo8(NULL-arpseq1)
+	ld r30, Z
+	
+	; if (!(i & (1 << 13))): arpptr >>= 14
+	sbrs r18, 5
+	swap r30
+	
+	; arpptr = arpeggio[arpptr & 0xF][(i >> 8) & 1]
+	andi r30, 0xF
+	lsl r30
+	mov r20, r18
+	andi r20, 1
+	or r30, r20
+	subi r30, lo8(NULL-arpeggio)
+	ld r30, Z
+	
+	; if (!(i & 0x80)): arpptr >>= 14
+	sbrs r19, 7
+	swap r30
+	
+	; note = arpnotes[arpptr & 0xF]
+	andi r30, 0xF
+	lsl r30
+	subi r30, lo8(NULL-arpnotes)
+	ld r21, Z+
+	ld r20, Z
+	
+	; arp_osc += note
+	lds r22, arposc
+	lds r23, arposc + 1
+	add r23, r21
+	adc r22, r20	
+	sts arposc, r22		; keep r22 for later!
+	sts arposc + 1, r23
+	
+	; if (!(i >> 17)): break arp
+	mov r20, r17
+	lsr r20
+	breq noarp
+	
+	; r20 = arptiming[(i >> 12) & 3]
+	mov r30, r18
+	swap r30
+	andi r30, 3
+	subi r30, lo8(NULL-arptiming)
+	ld r20, Z
+	
+	; if (!((r20 << ((i >> 9) & 7)) & 0x80)): break arp
+	mov r21, r18
+	lsr r21
+	andi r21, 7
+	breq arptiming_noshift
+
+arptiming_shift:
+	lsl r20
+	subi r21, 1
+	brne arptiming_shift
+	
+arptiming_noshift:
+	sbrs r20, 7
+	rjmp noarp
+	
+	; if (arp_osc & (1 << 12)): sample += 35;
+	sbrc r22, 4
+	subi r16, -35
+	
+noarp:
 	out OCR0AL, r16
 	
 	cbi PORTB, 2
 	rjmp mainloop
 
-	.org 0x100
+	.org 0x300
 	
 notes:
-	.word 	-1, 134, 159, 179, 201, 213, 239, 268, 301, 319, 358, 401, 425, 451, 477, 536, 601, 637, 715
+	.word 	-1, 134, 159, 179, 201
+arpnotes:
+	.word	213, 239, 268, 301, 319, 358, 401, 425, 451, 477, 536, 601, 637, 715
 	
 bassline:
 	.byte	14, 14, 18, 12, 14, 14, 20, 12, 14, 14, 18, 8, 10, 10, 4, 8
@@ -197,3 +281,25 @@ bassline:
 
 bassbeat:
 	.byte	0, 0, 1, 0, 0, 1, 0, 1
+
+arpseq1:
+	.byte	0x00, 0x12, 0x00, 0x62
+	.byte	0x00, 0x12, 0x00, 0x17
+	.byte	0x00, 0x12, 0x00, 0x12
+	.byte	0x33, 0x22, 0x00, 0x45
+
+arpseq2:
+	.byte	0, 1, 0, 1, 0, 1, 0, 2, 3, 3
+
+arptiming:
+	.byte	0x0C, 0x30, 0xFB, 0x0C
+
+arpeggio:
+	.byte	0x24, 0x6A
+	.byte	0x46, 0x9C
+	.byte	0x13, 0x59
+	.byte	0x02, 0x47
+	.byte	0x24, 0x59
+	.byte	0x24, 0x58
+	.byte	0x57, 0xAD
+	.byte	0x35, 0x9B
