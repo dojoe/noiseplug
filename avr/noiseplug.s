@@ -22,7 +22,6 @@ LEADINIT2 = 3571
 .section .bss
 
 	.comm int_ctr, 1
-	.comm i, 3
 
 	.comm lead1, 4
 	.comm lead2, 4
@@ -46,14 +45,14 @@ NULL:
 	.type	__vector_4, @function
 __vector_4:
 	push r16
-	push r24
 	in r16, SREG
-	lds r24,int_ctr
-	subi r24,lo8(-(1))
-	andi r24,lo8(3)
-	sts int_ctr,r24
-	out SREG,r16
-	pop r24
+	push r16
+	lds r16,int_ctr
+	subi r16, -1
+	andi r16, 3
+	sts int_ctr, r16
+	pop r16
+	out SREG, r16
 	pop r16
 	reti
 	.size	__vector_4, .-__vector_4
@@ -67,18 +66,18 @@ clear_sram:
 	sbrs r30, 5
 	rjmp clear_sram
 	
-	ldi r18, 0;LEADSIZE
+	ldi r18, LEADSIZE
 	sts lead1, r18
 	sts lead2, r18
 	sts lead3, r18
-;	ldi r18, hi8(LEADINIT1)
-;	sts leadosc2, r18
-;	ldi r18, lo8(LEADINIT1)
-;	sts leadosc2 + 1, r18
-;	ldi r18, hi8(LEADINIT2)
-;	sts leadosc3, r18
-;	ldi r18, lo8(LEADINIT2)
-;	sts leadosc3 + 1, r18
+	ldi r18, hi8(LEADINIT1)
+	sts lead2 + 2, r18
+	ldi r18, lo8(LEADINIT1)
+	sts lead2 + 3, r18
+	ldi r18, hi8(LEADINIT2)
+	sts lead3 + 2, r18
+	ldi r18, lo8(LEADINIT2)
+	sts lead3 + 3, r18
 
 	out CCP, r17
 	out CLKPSR, r16
@@ -94,18 +93,23 @@ clear_sram:
 	sei
 	out TIFR0, r17
 
+	; YH and ZH never change
+	ldi r31, hi8(bassline+0x4000)
+	clr r29
+	
+	; init i
+	ldi r17, 3
+	ldi r18, 0xF0
+	clr r19
+
 mainloop:
 	sleep
 	clr r16
-	lds r17, int_ctr
-	tst r17
+	lds r20, int_ctr
+	tst r20
 	brne mainloop
 	
 	sbi PORTB, 2
-	
-	lds r17, i
-	lds r18, i+1
-	lds r19, i+2
 	
 	subi r19, 0xff
 	sbci r18, 0xff
@@ -123,10 +127,8 @@ mainloop:
 	clr r18
 	
 norestart:
-	sts i, r17
-	sts i+1, r18
-	sts i+2, r19
-
+	;rjmp noarp
+	
 ; ==== BASS ====
 	; bassptr(r20) = (i >> 13) & 0xF
 	mov r20, r17
@@ -141,7 +143,6 @@ norestart:
 	ori r20, 0x10
 	
 	; note = notes[bassline[bassptr]]
-	ldi r31, hi8(bassline+0x4000)
 	ldi r30, lo8(bassline)
 	add r30, r20
 	ld r20, Z
@@ -185,7 +186,7 @@ nobassbeat:
 	andi r22, 0x7F
 	add r24, r22
 	
-	; if ((i >> 6) & 0xF) == 0xF: sample += (bass >> 2)
+	; if !((i >> 6) & 0xF) == 0xF: sample += (bass >> 2)
 	lsr r24
 	lsr r24
 	mov r20, r18
@@ -201,7 +202,7 @@ addbass:
 	add r16, r24
 	
 noaddbass:	
-
+	
 ; ==== ARPEGGIO ====
 	; arpptr(r30) = arpseq1[arpseq2[i >> 16]][(i >> 14) & 3]
 	mov r30, r17
@@ -284,30 +285,29 @@ arptiming_noshift:
 noarp:
 
 ; ==== LEAD ===
-	clr r29
 	ldi r28, lead1
 	ldi r24, 0
 	ldi r25, ~1
 	rcall lead_voice
-	mov r16, r23
+	add r16, r23
 	
-	;ldi r28, lead2
-	;ldi r24, 4
-	;ldi r25, ~2
-	;rcall lead_voice
-	;lsr r23
-	;lsr r23
-	;add r16, r23
-	;lsr r23
-	;add r16, r23
+	ldi r28, lead2
+	ldi r24, 4
+	ldi r25, ~2
+	rcall lead_voice
+	lsr r23
+	lsr r23
+	add r16, r23
+	lsr r23
+	add r16, r23
 	
-	;ldi r28, lead3
-	;ldi r24, 8
-	;ldi r25, ~4
-	;rcall lead_voice
-	;lsr r23
-	;lsr r23
-	;add r16, r23
+	ldi r28, lead3
+	ldi r24, 8
+	ldi r25, ~4
+	rcall lead_voice
+	lsr r23
+	lsr r23
+	add r16, r23
 
 	out OCR0AL, r16
 	
@@ -386,7 +386,7 @@ getleaddata:
 	ld r24, Z					; r24 = data!
 	
 	; if (0 == leadtimer) {
-	neg r25
+	com r25
 	tst r27
 	brne noleadupdate
 	
@@ -435,10 +435,10 @@ noleadupdate:
 	and r26, r25
 	brne noreduce
 	
-	lsr r23
-	mov r22, r23
-	lsr r23
-	add r23, r22
+;	lsr r23
+;	mov r22, r23
+;	lsr r23
+;	add r23, r22
 	
 noreduce:
 	; if (data == 0) return 0;
