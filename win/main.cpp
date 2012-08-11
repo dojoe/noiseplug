@@ -117,16 +117,23 @@ static unsigned char voice_lead(unsigned long i, int voice_nr)
 static inline unsigned char voice_arp(unsigned long i)
 {
 	static uint16_t arp_osc = 0;
-	uint8_t arpptr2 = arpseq1[arpseq2[i >> 16]][(i >> 14) & 3];
+	uint8_t arpptr = arpseq1[arpseq2[i >> 16]][(i >> 14) & 3];
 	if (!(i & (1 << 13)))
-		arpptr2 >>= 4;
-	uint8_t arpptr = arpeggio[arpptr2 & 0xF][(i >> 8) & 1];
+		arpptr >>= 4;
+	arpptr = arpeggio[arpptr & 0xF][(i >> 8) & 1];
 	if (!(i & 0x80))
 		arpptr >>= 4;
 
 	int note = arpnotes[arpptr & 0xF];
 	arp_osc += note;
-	return ((arptiming & (1 << (31 - (i >> 9)))) && (arp_osc & (1 << 12)) && ((i >> 13) > 15)) ? 0 : 140;
+
+	if ((i >> 13) <= 15)
+		return 0;
+
+	if (!(arptiming & (1 << (31 - (i >> 9)))))
+		return 0;
+
+	return (arp_osc & (1 << 12)) ? 0 : 35;
 }
 
 static inline unsigned char voice_bass(unsigned long i)
@@ -147,7 +154,7 @@ static inline unsigned char voice_bass(unsigned long i)
 static inline uint8_t next_sample()
 {
 	static unsigned long i = 0;//x40000;
-	uint8_t ret = (voice_lead(i, 0) >> 1) + THREEQUARTERS(voice_lead(i, 1) >> 2) + (voice_lead(i, 2) >> 3) + (voice_bass(i) >> 2) + (voice_arp(i) >> 2);
+	uint8_t ret = (voice_lead(i, 0) >> 1) + THREEQUARTERS(voice_lead(i, 1) >> 2) + (voice_lead(i, 2) >> 3) + (voice_bass(i) >> 2) + voice_arp(i);
 	i++;
 	if ((i >> 13) == ARPSIZE)
 		i = 16 << 13;
