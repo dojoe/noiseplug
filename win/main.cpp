@@ -132,7 +132,8 @@ static inline unsigned char voice_arp(unsigned long i)
 	if ((i >> 13) <= 15)
 		return 0;
 
-	if (!(arptiming[(i >> 12) & 3] & (1 << (7 - ((i >> 9) & 7)))))
+	uint8_t timing = arptiming[(i >> 12) & 3];
+	if (!((timing << ((i >> 9) & 7)) & 0x80))
 		return 0;
 
 	return (arp_osc & (1 << 12)) ? 0 : 35;
