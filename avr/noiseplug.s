@@ -25,7 +25,8 @@ PINB = 0x00
 	.comm bassosc, 2
 	.comm bassflange, 2
 	.comm arposc, 2
-	; leaves 10 bytes for stack
+	.comm boost, 1
+	; leaves 9 bytes for stack
 
 .section .text
 
@@ -51,6 +52,14 @@ __vector_4:
 	.size	__vector_4, .-__vector_4
 	
 main_cont:
+	clr r31
+	ldi r30, 0x40
+	
+clearsram:
+	st Z+, r16
+	sbrs r30, 5
+	rjmp clearsram
+
 	out CCP, r17
 	out CLKPSR, r16
 	ldi r17, 5
@@ -67,6 +76,7 @@ main_cont:
 
 mainloop:
 	sleep
+	clr r16
 	lds r17, int_ctr
 	tst r17
 	brne mainloop
@@ -77,15 +87,113 @@ mainloop:
 	lds r18, i+1
 	lds r19, i+2
 	
-	subi r19, -1
-	sbci r18, 0
-	sbci r17, 0
+	subi r19, 0xff
+	sbci r18, 0xff
+	sbci r17, 0xff
 	
+	; if ((i >> 13) == 76) i = 16 << 13;
+	mov r20, r18
+	rol r20
+	mov r20, r17
+	rol r20
+	subi r20, 0x13
+	brne norestart
+	
+	ldi r17, 2
+	clr r18
+	
+norestart:
 	sts i, r17
 	sts i+1, r18
 	sts i+2, r19
+
+; ==== BASS ====
+	; bassptr(r20) = (i >> 13) & 0xF
+	mov r20, r17
+	ror r20
+	mov r20, r18
+	ror r20
+	swap r20
+	andi r20, 0xF
 	
-	out OCR0AL, r18
+	; if (i >> 19) & 1: bassptr |= 0x10
+	sbrc r17, 3
+	ori r20, 0x10
+	
+	; note = notes[bassline[bassptr]]
+	ldi r31, hi8(bassline+0x4000)
+	ldi r30, lo8(bassline)
+	add r30, r20
+	ld r20, Z
+	ldi r30, lo8(notes)
+	add r30, r20
+	ld r21, Z+
+	ld r20, Z
+	
+	; if (bassbeat[(i >> 10) & 7]): note <<= 1
+	mov r22, r18
+	lsr r22
+	lsr r22
+	andi r22, 7
+	ldi r30, lo8(bassbeat)
+	add r30, r22
+	ld r22, Z
+	tst r22				; assuming this resets C
+	breq nobassbeat
+	rol r21
+	rol r20
+	
+nobassbeat:
+	; bassosc += note, ret = (bassosc >> 8) & 0x7F
+	lds r22, bassosc
+	lds r23, bassosc + 1
+	add r23, r21
+	adc r22, r20
+	sts bassosc, r22
+	sts bassosc + 1, r23
+	mov r24, r22
+	andi r24, 0x7F
+	
+	; bassflange += note + 1, ret += (bassflange >> 8) & 0x7F
+	lds r22, bassflange
+	lds r23, bassflange + 1
+	inc r21
+	add r23, r21
+	adc r22, r20
+	sts bassflange, r22
+	sts bassflange + 1, r23
+	andi r22, 0x7F
+	add r24, r22
+	
+	; if ((i >> 6) & 0xF) == 0xF: sample += (bass >> 2)
+	lsr r24
+	lsr r24
+	mov r20, r18
+	andi r20, 3
+	subi r20, 3
+	brne addbass
+	mov r20, r19
+	andi r20, 0xC0
+	subi r20, 0xC0
+	breq noaddbass
+
+addbass:	
+	add r16, r24
+	
+noaddbass:	
+	out OCR0AL, r16
 	
 	cbi PORTB, 2
 	rjmp mainloop
+
+	.org 0x100
+	
+notes:
+	.word 	-1, 134, 159, 179, 201, 213, 239, 268, 301, 319, 358, 401, 425, 451, 477, 536, 601, 637, 715
+	
+bassline:
+	.byte	14, 14, 18, 12, 14, 14, 20, 12, 14, 14, 18, 8, 10, 10, 4, 8
+	.byte	10, 10, 12, 12, 14, 14, 6, 6, 10, 10, 12, 12
+
+bassbeat:
+	.byte	0, 0, 1, 0, 0, 1, 0, 1
