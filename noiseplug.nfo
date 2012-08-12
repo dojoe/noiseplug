@@ -1,0 +1,21 @@
+      dojoe / shack
+
+        presents
+		
+     THE NOISEPLUG!
+	
+Two minutes of audio from 1k of
+Flash and 32 Bytes of RAM.
+
+Brofists and Ponies to
+  lft for the obvious inspiration =)
+  smrrd for the camera work
+  psykon for last-minute video editing <3
+  Evoke organizing for a great party!
+  YOU for showing interest in this.
+
+To play along at home: Take an ATtiny9,
+connect pin 1 to an audio input,
+flash noiseplug.hex. Have fun!
+
+http://shackspace.de/
